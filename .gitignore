@@ -46,4 +46,11 @@ next-env.d.ts
 
 # database
 prisma/dev.db
+
+# test files
+test_upload/
+
+# editor
+.vscode/
 prisma/dev.db-journal
+prisma/prisma/
