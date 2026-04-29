@@ -13,6 +13,8 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [chunkSize, setChunkSize] = useState(512);
+  const [chunkOverlap, setChunkOverlap] = useState(64);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function fetchDocs() {
@@ -31,6 +33,8 @@ export default function UploadPage() {
     setStatus("uploading");
     const form = new FormData();
     form.append("file", file);
+    form.append("chunkSize", String(chunkSize));
+    form.append("chunkOverlap", String(chunkOverlap));
     const res = await fetch("/api/upload", { method: "POST", body: form });
     if (res.ok) {
       setStatus("success");
@@ -82,6 +86,32 @@ export default function UploadPage() {
               ({(file.size / 1024).toFixed(1)} KB)
             </p>
           )}
+          {/* Chunk settings */}
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Chunk Size (chars)</label>
+              <input
+                type="number"
+                min={100}
+                max={2000}
+                value={chunkSize}
+                onChange={(e) => setChunkSize(Number(e.target.value))}
+                className="w-full bg-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Chunk Overlap (chars)</label>
+              <input
+                type="number"
+                min={0}
+                max={chunkSize - 1}
+                value={chunkOverlap}
+                onChange={(e) => setChunkOverlap(Number(e.target.value))}
+                className="w-full bg-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
           <button
             onClick={handleUpload}
             disabled={!file || status === "uploading"}

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addDocumentChunks } from "@/lib/chroma";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Replaces any character that isn't alphanumeric, dot, dash, or underscore
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 255);
 }
@@ -16,6 +18,10 @@ export async function POST(req: NextRequest) {
 
   const form = await req.formData();
   const file = form.get("file") as File | null;
+
+  // Clamp chunk settings to safe ranges so the user can't break indexing
+  const chunkSize = Math.max(100, Math.min(2000, Number(form.get("chunkSize")) || 512));
+  const chunkOverlap = Math.max(0, Math.min(chunkSize - 1, Number(form.get("chunkOverlap")) || 64));
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -32,8 +38,8 @@ export async function POST(req: NextRequest) {
 
   const safeFilename = sanitizeFilename(file.name);
 
+  // Extract plain text from the file
   let content = "";
-
   if (ext === "txt") {
     content = await file.text();
   } else {
@@ -44,6 +50,7 @@ export async function POST(req: NextRequest) {
     content = result.text;
   }
 
+  // Save document to DB first so upload succeeds even if Chroma is slow
   const doc = await prisma.document.create({
     data: {
       filename: safeFilename,
@@ -51,6 +58,11 @@ export async function POST(req: NextRequest) {
       userId: session.user.id,
     },
   });
+
+  // Index chunks into Chroma in the background — errors are logged but don't fail the upload
+  addDocumentChunks(doc.id, content, chunkSize, chunkOverlap).catch((err) =>
+    console.error("Chroma indexing failed:", err)
+  );
 
   return NextResponse.json({ id: doc.id, filename: doc.filename });
 }
