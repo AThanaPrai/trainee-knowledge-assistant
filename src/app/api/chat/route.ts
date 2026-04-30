@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     let systemPrompt: string | undefined;
     let sources: { filename: string; chunk: number; content: string }[] = [];
     try {
-      const result = await queryChunks(message, documentId ?? undefined);
+      const result = documentId ? await queryChunks(message, documentId) : { documents: [], sources: [] };
       if (result.documents.length > 0) {
         const context = result.documents.join("\n\n---\n\n");
         systemPrompt = `You are a helpful assistant. Use the following retrieved context to answer the user's question. If the context does not contain the answer, say so.\n\nContext:\n${context}`;
