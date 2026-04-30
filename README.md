@@ -80,6 +80,6 @@ CHROMA_URL=http://localhost:8000  # vector DB (default for local dev)
 
 ## Known Issues
 
-- RAG uses keyword-frequency vectors (FNV-1a hashing), not semantic embeddings — similar meaning but different words will not match
+- RAG uses keyword-frequency vectors (FNV-1a hashing), not semantic embeddings — retrieval quality is poor on documents with repetitive vocabulary (e.g. recipe books) where common words overwhelm specific keyword signals
 - Groq model has limited Thai language accuracy
 
