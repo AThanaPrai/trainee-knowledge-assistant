@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+ # Knowledge Assistant
 
-## Getting Started
+A web application that lets users upload documents and chat with an AI about their content.
 
-First, run the development server:
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16 (App Router), Tailwind CSS v4 |
+| Backend | Next.js API Routes |
+| Database | SQLite via Prisma ORM |
+| Auth | NextAuth v5 (credentials + bcrypt) |
+| AI | Groq (llama-3.1-8b-instant) — switchable to Claude, OpenAI, Gemini |
+| Vector DB | Chroma (RAG with chunk retrieval and citations) |
+
+## Setup & Run
+
+### With Docker (recommended)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env   # fill in your API keys
+docker compose up
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App will be available at http://localhost:3000
+Login with: `admin` / `admin123`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Local Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npx prisma migrate reset --force   # sets up DB and seeds admin user
+npm run dev
+```
 
-## Learn More
+## Features Done
 
-To learn more about Next.js, take a look at the following resources:
+- [x] Login + Protected Routes (bcrypt, JWT session)
+- [x] Chat with AI (multi-provider: Groq, Claude, OpenAI, Gemini)
+- [x] File Upload (PDF, TXT — 10MB limit, filename sanitized)
+- [x] Chat with Uploaded File Context
+- [x] Token Usage Counter (per message + session total)
+- [x] Conversation History (save/load sessions)
+- [x] Markdown Rendering in AI responses
+- [x] Docker Compose + Healthcheck
+- [x] RAG with Vector DB (Chroma — chunk retrieval, citations, configurable chunk size/overlap)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── (auth)/login/        # login page
+│   ├── (protected)/         # chat and upload pages (auth required)
+│   └── api/                 # API routes: chat, upload, sessions, documents, health
+├── lib/
+│   ├── ai.ts                # AI provider abstraction (claude/openai/gemini/groq/mock)
+│   ├── chroma.ts            # Chroma vector DB client (indexing, retrieval)
+│   └── prisma.ts            # Prisma client singleton
+└── auth.ts                  # NextAuth configuration
+prisma/
+├── schema.prisma            # User, Session, Message, Document models
+└── seed.ts                  # Seeds admin user
+```
 
-## Deploy on Vercel
+Requests flow: browser → Next.js API route → Prisma (SQLite) + AI provider
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment Variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+DATABASE_URL=file:./dev.db
+AUTH_SECRET=your_secret
+AI_PROVIDER=groq              # claude | openai | gemini | groq | mock
+GROQ_API_KEY=your_key
+ANTHROPIC_API_KEY=your_key    # optional
+OPENAI_API_KEY=your_key       # optional
+GEMINI_API_KEY=your_key       # optional
+CHROMA_URL=http://localhost:8000  # vector DB (default for local dev)
+```
+
+## Known Issues
+
+- RAG uses keyword-frequency vectors (FNV-1a hashing), not semantic embeddings — similar meaning but different words will not match
+- Groq model has limited Thai language accuracy
+

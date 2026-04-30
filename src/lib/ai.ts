@@ -9,6 +9,9 @@ export interface ChatResponse {
   outputTokens: number;
 }
 
+// Each function below wraps a different AI provider with the same interface.
+// Dynamic imports keep unused SDKs out of the bundle.
+
 async function chatWithClaude(messages: ChatMessage[], systemPrompt?: string): Promise<ChatResponse> {
   const Anthropic = (await import("@anthropic-ai/sdk")).default;
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -31,6 +34,7 @@ async function chatWithOpenAI(messages: ChatMessage[], systemPrompt?: string): P
   const OpenAI = (await import("openai")).default;
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+  // OpenAI uses a "system" message in the array instead of a separate field
   const allMessages = [
     ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
     ...messages,
@@ -53,6 +57,7 @@ async function chatWithGemini(messages: ChatMessage[], systemPrompt?: string): P
   const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
   const model = client.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
+  // Gemini separates history from the current message and uses "model" instead of "assistant"
   const history = messages.slice(0, -1).map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
@@ -78,6 +83,7 @@ async function chatWithGroq(messages: ChatMessage[], systemPrompt?: string): Pro
   const Groq = (await import("groq-sdk")).default;
   const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+  // Groq follows the OpenAI message format (system message in array)
   const allMessages = [
     ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
     ...messages,
@@ -95,6 +101,7 @@ async function chatWithGroq(messages: ChatMessage[], systemPrompt?: string): Pro
   };
 }
 
+// Used in tests or when no API key is set — returns a predictable response instantly
 async function chatWithMock(messages: ChatMessage[]): Promise<ChatResponse> {
   const last = messages[messages.length - 1].content;
   return {
@@ -104,6 +111,7 @@ async function chatWithMock(messages: ChatMessage[]): Promise<ChatResponse> {
   };
 }
 
+// Single entry point — switches provider based on AI_PROVIDER env var
 export async function chat(messages: ChatMessage[], systemPrompt?: string): Promise<ChatResponse> {
   const provider = process.env.AI_PROVIDER ?? "mock";
   if (provider === "openai") return chatWithOpenAI(messages, systemPrompt);

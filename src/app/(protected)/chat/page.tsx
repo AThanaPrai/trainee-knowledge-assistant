@@ -10,6 +10,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   tokenUsage: number;
+  sources?: { filename: string; chunk: number; content: string }[];
 }
 
 interface ChatSession {
@@ -32,6 +33,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [activeChunk, setActiveChunk] = useState<{ filename: string; chunk: number; content: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ export default function ChatPage() {
       setCurrentSessionId(data.sessionId);
       setMessages((prev) => [
         ...prev,
-        { id: data.sessionId + Date.now(), role: "assistant", content: data.content, tokenUsage: data.tokenUsage },
+        { id: data.sessionId + Date.now(), role: "assistant", content: data.content, tokenUsage: data.tokenUsage, sources: data.sources },
       ]);
       fetchSessions();
     }
@@ -234,6 +236,20 @@ export default function ChatPage() {
                 {msg.role === "assistant" && msg.tokenUsage > 0 && (
                   <p className="text-xs text-slate-500 mt-1 px-1">{msg.tokenUsage} tokens</p>
                 )}
+                {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
+                  <div className="text-xs text-slate-500 mt-1 px-1 flex flex-wrap gap-1">
+                    <span>Sources:</span>
+                    {msg.sources.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveChunk(s)}
+                        className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-2 py-0.5 rounded cursor-pointer"
+                      >
+                        {s.filename} §{s.chunk + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -270,6 +286,26 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+      {/* Chunk preview modal */}
+      {activeChunk && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+          onClick={() => setActiveChunk(null)}
+        >
+          <div
+            className="bg-slate-800 border border-slate-600 rounded-xl p-5 max-w-lg w-full mx-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-blue-400">
+                {activeChunk.filename} — chunk {activeChunk.chunk + 1}
+              </p>
+              <button onClick={() => setActiveChunk(null)} className="text-slate-400 hover:text-white text-lg leading-none">✕</button>
+            </div>
+            <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{activeChunk.content}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

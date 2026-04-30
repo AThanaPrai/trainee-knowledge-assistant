@@ -7,6 +7,8 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - CHROMA_URL=http://chroma:8000
+
     depends_on:
       - chroma
     healthcheck:
