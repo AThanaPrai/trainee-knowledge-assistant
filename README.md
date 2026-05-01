@@ -63,6 +63,8 @@ prisma/
 └── seed.ts                  # Seeds admin user
 ```
 
+Each protected page is split into a server component (`page.tsx`) and a client component (`ChatClient.tsx`, `UploadClient.tsx`). The server component handles auth checks and Prisma queries, then passes data as props to the client component which manages interactivity via React hooks.
+
 Requests flow: browser → Next.js API route → Prisma (SQLite) + AI provider
 
 ## Environment Variables
@@ -77,6 +79,10 @@ OPENAI_API_KEY=your_key       # optional
 GEMINI_API_KEY=your_key       # optional
 CHROMA_URL=http://localhost:8000  # vector DB (default for local dev)
 ```
+
+## Business Scenario Video (Part 2)
+
+[Watch video](https://drive.google.com/file/d/1DGnkSLfSnOQI41tNweMeQUhjl2BeiO9p/view?usp=sharing)
 
 ## Known Issues
 
